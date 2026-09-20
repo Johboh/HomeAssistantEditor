@@ -289,8 +289,8 @@ async function callHAWebSocket(payload) {
     });
 }
 
-async function cleanupOrphanedEntities() {
-    console.log('[Cleanup] Starting orphaned entity cleanup...');
+async function cleanupOrphanedEntities(targetDomain = null) {
+    console.log(`[Cleanup] Starting orphaned entity cleanup${targetDomain ? ` for ${targetDomain}` : ''}...`);
     const supervisorToken = process.env.SUPERVISOR_TOKEN;
 
     if (!supervisorToken) {
@@ -318,8 +318,13 @@ async function cleanupOrphanedEntities() {
 
         const states = await statesResponse.json();
 
-        // 2. Identify orphaned (restored) entities
-        const orphans = states.filter(s => s.attributes && s.attributes.restored === true);
+        // 2. Identify orphaned (restored) entities - strictly limit to automations and scripts to prevent deleting real devices
+        const orphans = states.filter(s => {
+            const isTargetDomain = targetDomain
+                ? s.entity_id.startsWith(`${targetDomain}.`)
+                : (s.entity_id.startsWith('automation.') || s.entity_id.startsWith('script.'));
+            return isTargetDomain && s.attributes && s.attributes.restored === true;
+        });
 
         if (orphans.length === 0) {
             console.log('[Cleanup] No orphaned entities found.');
@@ -625,7 +630,7 @@ app.post('/api/reload/automations', async (req, res) => {
         await callHomeAssistantService('automation', 'reload');
 
         // Trigger Spook cleanup AFTER reload ensures HA knows about the deleted entities
-        cleanupOrphanedEntities().catch(e => console.error(e));
+        cleanupOrphanedEntities('automation').catch(e => console.error(e));
 
         res.json({ success: true, message: 'Automations reloaded' });
     } catch (error) {
@@ -640,7 +645,7 @@ app.post('/api/reload/scripts', async (req, res) => {
         await callHomeAssistantService('script', 'reload');
 
         // Trigger Spook cleanup AFTER reload ensures HA knows about the deleted entities
-        cleanupOrphanedEntities().catch(e => console.error(e));
+        cleanupOrphanedEntities('script').catch(e => console.error(e));
 
         res.json({ success: true, message: 'Scripts reloaded' });
     } catch (error) {
@@ -1355,8 +1360,10 @@ app.get('/api/orphaned/:type', async (req, res) => {
 
 // Delete specific orphan (manual trigger)
 app.delete('/api/orphaned/:type/:id', async (req, res) => {
+    const { type } = req.params;
+    const domain = type === 'automations' ? 'automation' : (type === 'scripts' ? 'script' : null);
     try {
-        await cleanupOrphanedEntities();
+        await cleanupOrphanedEntities(domain);
         res.json({ success: true, message: 'Triggered orphaned entity cleanup' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
