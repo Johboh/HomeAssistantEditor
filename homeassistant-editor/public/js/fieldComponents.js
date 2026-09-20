@@ -936,7 +936,7 @@ function initTimePicker(id) {
 
     let currentMode = ampmSelect.value; // 'AM', 'PM', or '24h'
 
-    function updateValue() {
+    function updateValue(emitEvents = true) {
         let h = parseInt(hoursInput?.value || '0');
         const m = (picker.querySelector('.time-minutes')?.value || '0').padStart(2, '0');
         const s = (picker.querySelector('.time-seconds')?.value || '0').padStart(2, '0');
@@ -948,6 +948,8 @@ function initTimePicker(id) {
 
         const val = `${String(h).padStart(2, '0')}:${m}:${s}`;
         hidden.value = val;
+        if (!emitEvents) return;
+
         hidden.dispatchEvent(new Event('change', { bubbles: true }));
 
         picker.dispatchEvent(new CustomEvent('picker-change', {
@@ -1003,8 +1005,8 @@ function initTimePicker(id) {
         });
     });
 
-    // Set initial value
-    updateValue();
+    // Set initial value without marking the editor as changed
+    updateValue(false);
 }
 
 // ============================================

@@ -2385,8 +2385,19 @@ function formatRelativeTime(timestamp) {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function selectItem(id, forceType = null) {
+function selectItem(id, forceType = null, skipDirtyCheck = false) {
     if (!id) return;
+
+    // If already editing this item, do nothing
+    if (state.selectedItem && String(state.selectedItem.id) === String(id)) {
+        return;
+    }
+
+    // Check for unsaved changes before switching
+    if (!skipDirtyCheck && state.isDirty) {
+        confirmDiscardChanges(() => selectItem(id, forceType, true));
+        return;
+    }
 
     // Reset undo/redo history when switching items
     clearHistory();
@@ -2786,6 +2797,7 @@ function renderBlocks(section, blocks, expandedStates = null) {
         if (aliasText && aliasInput) {
             aliasText.addEventListener('click', (e) => {
                 e.stopPropagation();
+                aliasInput.dataset.editingValue = aliasInput.value.trim();
                 aliasText.style.display = 'none';
                 aliasInput.style.display = 'block';
                 aliasInput.focus();
@@ -2803,8 +2815,10 @@ function renderBlocks(section, blocks, expandedStates = null) {
                 // Update tags
                 renderBlockTags(blockEl, aliasText.textContent);
 
-                checkDirty();
-                updateYamlView();
+                if (newValue !== aliasInput.dataset.editingValue) {
+                    checkDirty();
+                    updateYamlView();
+                }
             });
 
             aliasInput.addEventListener('input', () => {
@@ -2955,6 +2969,7 @@ function initializeBlockComponents(blockEl) {
     if (aliasText && aliasInput) {
         aliasText.addEventListener('click', (e) => {
             e.stopPropagation();
+            aliasInput.dataset.editingValue = aliasInput.value.trim();
             aliasText.style.display = 'none';
             aliasInput.style.display = 'block';
             aliasInput.focus();
@@ -2970,8 +2985,10 @@ function initializeBlockComponents(blockEl) {
             aliasText.style.display = 'block';
 
             renderBlockTags(blockEl, aliasText.textContent);
-            checkDirty();
-            updateYamlView();
+            if (newValue !== aliasInput.dataset.editingValue) {
+                checkDirty();
+                updateYamlView();
+            }
         });
 
         aliasInput.addEventListener('input', () => {
@@ -6880,54 +6897,58 @@ function validateEditorFields() {
 }
 
 function createNewItem() {
-    const isAutomation = state.currentGroup === 'automations';
+    confirmDiscardChanges(() => {
+        const isAutomation = state.currentGroup === 'automations';
 
-    const newItem = {
-        id: `new_${Date.now()}`,
-        alias: isAutomation ? 'New Automation' : 'New Script',
-        description: '',
-        mode: 'single',
-        enabled: true,
-        _type: isAutomation ? 'automation' : 'script'
-    };
+        const newItem = {
+            id: `new_${Date.now()}`,
+            alias: isAutomation ? 'New Automation' : 'New Script',
+            description: '',
+            mode: 'single',
+            enabled: true,
+            _type: isAutomation ? 'automation' : 'script'
+        };
 
-    if (isAutomation) {
-        newItem.triggers = [];
-        newItem.conditions = [];
-        newItem.actions = [];
-    } else {
-        newItem.sequence = [];
-    }
+        if (isAutomation) {
+            newItem.triggers = [];
+            newItem.conditions = [];
+            newItem.actions = [];
+        } else {
+            newItem.sequence = [];
+        }
 
-    state.selectedItem = newItem;
-    state.isNewItem = true;
-    checkDirty();
+        state.selectedItem = newItem;
+        state.isNewItem = true;
+        checkDirty();
 
-    populateEditor(newItem);
-    showEditor();
+        populateEditor(newItem);
+        showEditor();
 
-    // Focus on the name field
-    elements.editorAlias.focus();
-    elements.editorAlias.select();
+        // Focus on the name field
+        elements.editorAlias.focus();
+        elements.editorAlias.select();
 
-    // Snapshot for new item
-    state.originalItemSnapshot = JSON.stringify(getEditorData());
+        // Snapshot for new item
+        state.originalItemSnapshot = JSON.stringify(getEditorData());
+    });
 }
 
 function duplicateItem() {
     if (!state.selectedItem) return;
 
-    const duplicate = JSON.parse(JSON.stringify(state.selectedItem));
-    duplicate.id = `${duplicate.id}_copy_${Date.now()}`;
-    duplicate.alias = `${duplicate.alias} (Copy)`;
+    confirmDiscardChanges(() => {
+        const duplicate = JSON.parse(JSON.stringify(state.selectedItem));
+        duplicate.id = `${duplicate.id}_copy_${Date.now()}`;
+        duplicate.alias = `${duplicate.alias} (Copy)`;
 
-    state.selectedItem = duplicate;
-    state.isNewItem = true;
-    checkDirty();
+        state.selectedItem = duplicate;
+        state.isNewItem = true;
+        checkDirty();
 
-    populateEditor(duplicate);
-    state.originalItemSnapshot = JSON.stringify(getEditorData());
-    showToast('Item duplicated. Save to create the copy.', 'info');
+        populateEditor(duplicate);
+        state.originalItemSnapshot = JSON.stringify(getEditorData());
+        showToast('Item duplicated. Save to create the copy.', 'info');
+    });
 }
 
 // ============================================
@@ -7471,23 +7492,25 @@ function updateSearchClear() {
 
 function selectTagGroup(groupId) {
     if (!groupId) return;
-    if (String(state.selectedTagGroup) === String(groupId)) {
-        state.selectedTagGroup = null;
-    } else {
-        state.selectedTagGroup = groupId;
-        state.selectedFolder = null;
-        state.selectedCategory = null;
-        state.selectedItem = null;
-    }
+    confirmDiscardChanges(() => {
+        if (String(state.selectedTagGroup) === String(groupId)) {
+            state.selectedTagGroup = null;
+        } else {
+            state.selectedTagGroup = groupId;
+            state.selectedFolder = null;
+            state.selectedCategory = null;
+            state.selectedItem = null;
+        }
 
-    // Update active state in sidebar
-    elements.groupItems.forEach(i => i.classList.remove('active'));
-    renderFolders();
-    renderTagGroups();
-    renderCategories();
+        // Update active state in sidebar
+        elements.groupItems.forEach(i => i.classList.remove('active'));
+        renderFolders();
+        renderTagGroups();
+        renderCategories();
 
-    showEmptyState();
-    loadItems();
+        showEmptyState();
+        loadItems();
+    });
 }
 
 // ============================================
@@ -7577,23 +7600,25 @@ function renderCategories() {
 
 function selectCategory(categoryId) {
     if (!categoryId) return;
-    if (String(state.selectedCategory) === String(categoryId)) {
-        state.selectedCategory = null;
-    } else {
-        state.selectedCategory = categoryId;
-        state.selectedFolder = null;
-        state.selectedTagGroup = null;
-        state.selectedItem = null;
-    }
+    confirmDiscardChanges(() => {
+        if (String(state.selectedCategory) === String(categoryId)) {
+            state.selectedCategory = null;
+        } else {
+            state.selectedCategory = categoryId;
+            state.selectedFolder = null;
+            state.selectedTagGroup = null;
+            state.selectedItem = null;
+        }
 
-    // Update active state in sidebar
-    elements.groupItems.forEach(i => i.classList.remove('active'));
-    renderFolders();
-    renderTagGroups();
-    renderCategories();
+        // Update active state in sidebar
+        elements.groupItems.forEach(i => i.classList.remove('active'));
+        renderFolders();
+        renderTagGroups();
+        renderCategories();
 
-    showEmptyState();
-    loadItems();
+        showEmptyState();
+        loadItems();
+    });
 }
 
 function getItemCategoryInfo(item) {
@@ -7693,24 +7718,26 @@ function deleteTagGroupFromModal() {
 }
 
 function selectFolder(folderId) {
-    console.log('[Folders] Selecting folder:', folderId);
-    if (String(state.selectedFolder) === String(folderId)) {
-        state.selectedFolder = null;
-    } else {
-        state.selectedFolder = folderId;
-        state.selectedTagGroup = null;
-        state.selectedCategory = null;
-    }
-    state.selectedItem = null;
+    confirmDiscardChanges(() => {
+        console.log('[Folders] Selecting folder:', folderId);
+        if (String(state.selectedFolder) === String(folderId)) {
+            state.selectedFolder = null;
+        } else {
+            state.selectedFolder = folderId;
+            state.selectedTagGroup = null;
+            state.selectedCategory = null;
+        }
+        state.selectedItem = null;
 
-    // Update active state in sidebar
-    elements.groupItems.forEach(i => i.classList.remove('active'));
-    renderFolders();
-    renderTagGroups();
-    renderCategories();
+        // Update active state in sidebar
+        elements.groupItems.forEach(i => i.classList.remove('active'));
+        renderFolders();
+        renderTagGroups();
+        renderCategories();
 
-    showEmptyState();
-    loadItems();
+        showEmptyState();
+        loadItems();
+    });
 }
 
 function promptCreateFolder() {
@@ -7811,15 +7838,31 @@ function deleteFolderFromPopup() {
 // Custom Confirm Modal
 let confirmCallback = null;
 
-function showConfirm(message, onConfirm) {
+function showConfirm(message, onConfirm, confirmText = 'Delete', confirmClass = 'btn-danger') {
     confirmCallback = onConfirm;
-    document.getElementById('confirm-modal-message').textContent = message;
-    document.getElementById('confirm-modal').classList.add('active');
+    const msgEl = document.getElementById('confirm-modal-message');
+    if (msgEl) msgEl.textContent = message;
+
+    const confirmBtn = document.getElementById('confirm-modal-confirm');
+    if (confirmBtn) {
+        confirmBtn.textContent = confirmText;
+        confirmBtn.className = `btn ${confirmClass}`;
+    }
+
+    const modal = document.getElementById('confirm-modal');
+    if (modal) modal.classList.add('active');
 }
 
 function hideConfirm() {
     confirmCallback = null;
-    document.getElementById('confirm-modal').classList.remove('active');
+    const modal = document.getElementById('confirm-modal');
+    if (modal) modal.classList.remove('active');
+
+    const confirmBtn = document.getElementById('confirm-modal-confirm');
+    if (confirmBtn) {
+        confirmBtn.textContent = 'Delete';
+        confirmBtn.className = 'btn btn-danger';
+    }
 }
 
 function handleConfirm() {
@@ -7827,6 +7870,29 @@ function handleConfirm() {
         confirmCallback();
     }
     hideConfirm();
+}
+
+/**
+ * Prompt confirmation if there are unsaved changes before proceeding with an action.
+ * @param {Function} onProceed - Callback to execute if no changes or user confirms leaving
+ * @returns {boolean} Whether action was executed synchronously
+ */
+function confirmDiscardChanges(onProceed) {
+    checkDirty();
+    if (state.isDirty) {
+        showConfirm(
+            'You have unsaved changes. Are you sure you want to leave without saving? Changes will be lost.',
+            () => {
+                state.isDirty = false;
+                onProceed();
+            },
+            'Leave without saving',
+            'btn-danger'
+        );
+        return false;
+    }
+    onProceed();
+    return true;
 }
 
 function addItemToFolder(itemId, folderId) {
@@ -8033,17 +8099,22 @@ function initEventListeners() {
     // Group toggle
     elements.groupItems.forEach(item => {
         item.addEventListener('click', () => {
-            elements.groupItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            state.selectedFolder = null;
-            state.selectedTagGroup = null;
-            state.selectedCategory = null;
-            state.currentGroup = item.dataset.group;
-            renderFolders(); // Update folder active states
-            renderTagGroups();
-            renderCategories();
-            showEmptyState();
-            loadItems();
+            if (item.dataset.group === state.currentGroup && !state.selectedFolder && !state.selectedTagGroup && !state.selectedCategory) {
+                return;
+            }
+            confirmDiscardChanges(() => {
+                elements.groupItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                state.selectedFolder = null;
+                state.selectedTagGroup = null;
+                state.selectedCategory = null;
+                state.currentGroup = item.dataset.group;
+                renderFolders(); // Update folder active states
+                renderTagGroups();
+                renderCategories();
+                showEmptyState();
+                loadItems();
+            });
         });
 
         // Add drop handler to remove items from folders
@@ -8332,6 +8403,10 @@ function initEventListeners() {
 
         // Escape to close modals
         if (e.key === 'Escape') {
+            const confirmModal = document.getElementById('confirm-modal');
+            if (confirmModal && confirmModal.classList.contains('active')) {
+                hideConfirm();
+            }
             if (elements.addBlockModal.classList.contains('active')) {
                 closeModal();
             }
@@ -8773,6 +8848,16 @@ function initEventListeners() {
             datalist.innerHTML = triggerIds
                 .map(id => `<option value="${escapeHtml(id)}"></option>`)
                 .join('');
+        }
+    });
+
+    // Prompt confirmation before leaving/refreshing the page if there are unsaved changes
+    window.addEventListener('beforeunload', (e) => {
+        checkDirty();
+        if (state.isDirty) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave without saving? Changes will be lost.';
+            return e.returnValue;
         }
     });
 }
