@@ -21,10 +21,17 @@ const entityCache = {
 
         this.loading = true;
         try {
-            const res = await fetch('/api/entities');
+            const res = await fetch('./api/states');
             const data = await res.json();
             if (data.success) {
-                this.entities = data.entities;
+                const states = Array.isArray(data.states) ? data.states : [];
+                this.entities = states
+                    .filter(state => state && state.entity_id)
+                    .map(state => ({
+                        entity_id: state.entity_id,
+                        domain: state.entity_id.split('.')[0],
+                        friendly_name: state.attributes?.friendly_name || state.entity_id
+                    }));
                 this.loaded = true;
             }
         } catch (e) {
