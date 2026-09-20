@@ -107,7 +107,7 @@ function checkDirty() {
 function cleanupInternalFields(obj, isTopLevel = false) {
     // These fields are ALWAYS internal
     const internalFields = ['block-alias', '_invalid_event_data', '_invalid_device_extra', '_invalid_variables', '_type'];
-    
+
     // entity_id is only internal if it's at the top level (re-added by HA on load)
     // But it's REQUIRED inside triggers/actions (e.g. state trigger on an entity)
     if (isTopLevel) {
@@ -930,7 +930,7 @@ async function reloadInHA(showToastNotice = true) {
 
 function updateRunButtonState() {
     if (!elements.btnRun) return;
-    
+
     const entityId = state.selectedItem?.entity_id;
     const isRunning = entityId && state.runningEntities.has(entityId);
 
@@ -1006,7 +1006,7 @@ async function stopSelectedItem() {
 
     try {
         showToast(`Stopping ${state.currentGroup === 'automations' ? 'automation' : 'script'}...`, 'info');
-        
+
         const response = await fetch(`./api/stop/${domain}/${encodeURIComponent(itemId)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2081,7 +2081,7 @@ function renderItemsList(items) {
         ` : '';
 
         return `
-    <div class="item-card ${item.enabled === false ? 'disabled' : ''} ${activeClass}" 
+    <div class="item-card ${item.enabled === false ? 'disabled' : ''} ${activeClass}"
          data-id="${item.id}" data-type="${item._type}" draggable="true">
       <div class="item-name">
         <span class="status-dot ${item.enabled === false ? 'disabled' : ''}"></span>
@@ -2119,10 +2119,10 @@ function getItemTags(item) {
     const source = `${item.alias || item.id || ''} ${item.description || ''}`;
     const regex = /#[\w-]+/g;
     const matches = (source.match(regex) || []);
-    
+
     const normalized = [];
     const display = [];
-    
+
     matches.forEach(tag => {
         const norm = tag.slice(1).toLowerCase();
         if (!normalized.includes(norm)) {
@@ -3279,7 +3279,7 @@ function handleBlockDragStart(e, blockEl, section, header) {
             if (targetContainer) {
                 const isTargetNested = targetContainer.classList.contains('nested-blocks');
                 const childSelector = isTargetNested ? '.nested-block-wrapper' : '.action-block';
-                
+
                 const siblings = Array.from(targetContainer.children).filter(el =>
                     el.matches(childSelector) && el !== dragItem && el !== placeholder
                 );
@@ -3375,7 +3375,7 @@ function handleBlockDragStart(e, blockEl, section, header) {
                         // Was a root block: insert directly
                         targetContainer.insertBefore(dragItem, placeholder);
                     }
-                    
+
                     // Update direct child indices on root container
                     const directBlocks = Array.from(targetContainer.children).filter(el => el.classList.contains('action-block'));
                     directBlocks.forEach((el, idx) => el.dataset.index = String(idx));
@@ -4031,14 +4031,14 @@ function createBlockHtml(block, type, index, options = {}) {
         <div class="block-icon">
           ${getBlockIcon(block, type)}
         </div>
-        
+
         <div class="block-title-wrapper">
           <span class="block-alias-text ${!block.alias ? 'is-placeholder' : ''}">${escapeHtml(block.alias || defaultTitle)}</span>
           <input type="text" name="block-alias" class="block-title-input" value="${escapeHtml(block.alias || '')}" placeholder="${escapeHtml(defaultTitle)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other" style="display: none;">
         </div>
-        
+
         <div class="block-tags"></div>
-        
+
         <div class="block-actions">
           <button class="block-action-btn paste" title="Paste After" aria-label="Paste after block" style="${canPasteThisType ? '' : 'display: none;'}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -4769,7 +4769,7 @@ function renderBlockTags(blockEl, text) {
     // User didn't ask for this explicitly, but usually better UX.
     // However, if we change textContent, we might mess up the input value sync.
     // Let's keep the tags in the text for now, but style them in the tags container.
-    // Or we could hide them in the aliasText via CSS or logic. 
+    // Or we could hide them in the aliasText via CSS or logic.
     // Given "we dont have anymore teh #tags", simply displaying them in a separate container is a safe first step.
     // If the user wants them stripped from the main title, we can add that later.
 }
@@ -6065,7 +6065,7 @@ function formatArrayAsYaml(arr, indent = 2) {
                     const lines = vStr.split('\n');
                     const first = lines[0].trimStart();
                     const rest = lines.slice(1).map(l => pfx + '  ' + l.trimStart()).join('\n'); // Maintain alignment
-                    // Actually, helper returns fully indented block. 
+                    // Actually, helper returns fully indented block.
                     // vStr lines are already indented to level+2.
                     // lines[0] is level+2 spaces + key.
                     // We want level spaces + "- " + key.
@@ -6206,7 +6206,7 @@ function highlightYaml(code) {
             // Indent rainbow
             .replace(/\u0001i(\d+)\u0002/g, '<span class="indent-color-$1">')
             .replace(/\u0001\/i\u0002/g, '</span>')
-            
+
             .replace(/\u0001k\u0002/g, '<span class="token key">')
             .replace(/\u0001\/k\u0002/g, '</span>')
             .replace(/\u0001c\u0002/g, '<span class="token colon">')
@@ -6280,11 +6280,11 @@ function setupYamlEditorListeners() {
     //     pre.highlight-layer
 
     // The textarea and pre both scroll? Or parent scrolls?
-    // CSS check: 
+    // CSS check:
     // .code-area { position: relative; overflow: auto; ... }
     // textarea, pre { position: absolute; top:0; left:0; ... }
-    // If .code-area scrolls, then we don't need to sync textarea scroll, 
-    // but textarea must be sized to content? 
+    // If .code-area scrolls, then we don't need to sync textarea scroll,
+    // but textarea must be sized to content?
     // Usually textarea and pre share a container.
     // Let's assume textarea handles scrolling if it has overflow:auto (it usually does for input).
     // Or if container handles scrolling.
@@ -7523,7 +7523,7 @@ function loadCategories() {
         const rawScript = localStorage.getItem('ha-editor-categories-script');
         const autoCats = rawAuto ? JSON.parse(rawAuto) : [];
         const scriptCats = rawScript ? JSON.parse(rawScript) : [];
-        
+
         state.haMetadata.automationCategories = autoCats.map(cat => ({
             ...cat,
             id: cat.category_id || cat.id
@@ -7563,8 +7563,8 @@ function saveHAMetadata() {
 function renderCategories() {
     if (!elements.categoryList) return;
 
-    const categories = state.currentGroup === 'automations' ? 
-        (state.haMetadata.automationCategories || []) : 
+    const categories = state.currentGroup === 'automations' ?
+        (state.haMetadata.automationCategories || []) :
         (state.haMetadata.scriptCategories || []);
 
     if (!categories.length) {
@@ -7623,8 +7623,8 @@ function selectCategory(categoryId) {
 
 function getItemCategoryInfo(item) {
     if (!item || !item.category) return null;
-    const categories = item._type === 'automation' ? 
-        (state.haMetadata.automationCategories || []) : 
+    const categories = item._type === 'automation' ?
+        (state.haMetadata.automationCategories || []) :
         (state.haMetadata.scriptCategories || []);
     return categories.find(c => String(c.id) === String(item.category)) || { id: item.category, name: item.category };
 }
@@ -8576,7 +8576,7 @@ function initEventListeners() {
         });
         input.addEventListener('blur', () => {
             if (snapshot && state.isDirty) { // Simple check if dirty
-                // Better check: compare value? 
+                // Better check: compare value?
                 // state.isDirty is set on 'input', so if true, likely changed.
                 // But we want to be sure we don't push duplicate states if user focused but didn't type.
                 // Actually, getEditorData() inside snapshot has the OLD value.
@@ -8722,7 +8722,7 @@ function initEventListeners() {
         elements.settingShowCategories.addEventListener('change', (e) => {
             state.settings.showCategories = e.target.checked;
             localStorage.setItem('ha-editor-show-categories', e.target.checked);
-            
+
             const isAutomation = state.selectedItem ? state.selectedItem._type === 'automation' : true;
             const categories = isAutomation ? (state.haMetadata.automationCategories || []) : (state.haMetadata.scriptCategories || []);
             const hasCategories = categories.length > 0;
@@ -10158,35 +10158,35 @@ async function syncHAMetadata(type = 'all') {
 
                     if (entityId.startsWith('automation.')) {
                         const autoSlug = entityId.replace('automation.', '');
-                        match = (state.automations || []).find(a => 
-                            (uniqueId && a.id === uniqueId) || 
-                            (autoSlug && a.id === autoSlug) || 
-                            (entityId && a.id === entityId) || 
+                        match = (state.automations || []).find(a =>
+                            (uniqueId && a.id === uniqueId) ||
+                            (autoSlug && a.id === autoSlug) ||
+                            (entityId && a.id === entityId) ||
                             (origName && (a.id === origName || a.alias === origName)) ||
                             (customName && a.alias === customName)
                         );
                     } else if (entityId.startsWith('script.')) {
                         const scriptSlug = entityId.replace('script.', '');
-                        match = (state.scripts || []).find(s => 
-                            (scriptSlug && s.id === scriptSlug) || 
-                            (entityId && s.id === entityId) || 
+                        match = (state.scripts || []).find(s =>
+                            (scriptSlug && s.id === scriptSlug) ||
+                            (entityId && s.id === entityId) ||
                             (uniqueId && s.id === uniqueId) ||
                             (origName && (s.id === origName || s.alias === origName || (typeof origName === 'string' && s.id === origName.replace('script.', '')))) ||
                             (customName && s.alias === customName)
                         );
                     } else {
                         // Fallback matching if entityId is missing domain prefix
-                        match = (state.automations || []).find(a => 
+                        match = (state.automations || []).find(a =>
                             (uniqueId && a.id === uniqueId) ||
                             (origName && (a.id === origName || a.alias === origName)) ||
                             (customName && a.alias === customName)
-                        ) || (state.scripts || []).find(s => 
+                        ) || (state.scripts || []).find(s =>
                             (uniqueId && s.id === uniqueId) ||
                             (origName && (s.id === origName || s.alias === origName || (typeof origName === 'string' && s.id === origName.replace('script.', '')))) ||
                             (customName && s.alias === customName)
                         );
                     }
-                    
+
                     if (match && !areaFolders[ent.area_id].items.includes(match.id)) {
                         areaFolders[ent.area_id].items.push(match.id);
                     }
@@ -10196,7 +10196,7 @@ async function syncHAMetadata(type = 'all') {
             // Create/Update folders
             for (const [areaId, areaData] of Object.entries(areaFolders)) {
                 if (areaData.items.length === 0) continue;
-                
+
                 let existing = state.folders.find(f => f.name === areaData.name);
                 if (existing) {
                     // Update items (merge)
@@ -10516,7 +10516,7 @@ async function autoNameBlockWithAI(blockEl) {
     const section = inferBlockSectionFromElement(blockEl);
     const parseSection = section === 'triggers' ? 'trigger' : (section === 'conditions' ? 'condition' : 'action');
     const parsed = parseBlockElement(blockEl, parseSection);
-    
+
     showToast('Generating block title with Gemini...', 'info');
     try {
         const prompt = `You are a Home Assistant automation expert. Given the following Home Assistant ${parseSection} block definition:
